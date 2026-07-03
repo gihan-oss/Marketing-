@@ -1,4 +1,5 @@
 import type { TableKey } from "./schema";
+import type { ClientKey, ClientTableRole } from "./clients";
 
 /** A normalized Airtable record: field values keyed by the schema field key. */
 export interface Rec {
@@ -30,6 +31,25 @@ export interface Filters {
   owner?: string;
   /** Free-text search across primary fields. */
   q?: string;
+}
+
+/** A normalized record from a client base (keyed by ClientTableDef field keys). */
+export interface ClientRec {
+  id: string;
+  role: ClientTableRole;
+  /** Airtable table ID the record belongs to (for deep links + writes). */
+  tableId: string;
+  createdTime: string;
+  label: string;
+  fields: Record<string, string | number | boolean | null>;
+}
+
+export interface ClientSnapshot {
+  fetchedAt: string;
+  clientKey: ClientKey;
+  unconfigured?: boolean;
+  error?: string;
+  tables: Partial<Record<ClientTableRole, ClientRec[]>>;
 }
 
 export interface MetricResult {

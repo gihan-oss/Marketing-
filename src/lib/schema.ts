@@ -15,7 +15,24 @@ export interface FieldDef {
   type: string;
   /** Ordered option names for singleSelect fields (order = funnel/board order). */
   options?: string[];
+  /** When true, the field can be updated inline (write-back to Airtable). */
+  editable?: boolean;
 }
+
+/**
+ * Fields on the Amal marketing base that may be edited inline. Kept as an
+ * allowlist (rather than a flag per field) so the write API can validate
+ * every mutation against a small, auditable surface.
+ */
+export const AMAL_EDITABLE: Record<TableKey, string[]> = {
+  pipeline: ["stage", "owner", "nextAction", "nextActionDate", "dealValue", "notes"],
+  prospects: ["outreachStatus", "emailStatus", "segment", "region", "source", "notes"],
+  webinars: ["status", "prepStatus", "promotionStatus", "registrations", "attendees"],
+  content: ["status", "postType"],
+  campaigns: ["status", "category"],
+  strategy: ["status", "notes"],
+  people: ["role", "email"],
+};
 
 export interface TableDef {
   id: string;
