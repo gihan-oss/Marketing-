@@ -65,6 +65,24 @@ DataProvider (client)   — global filters (URL-synced), drill-down state, theme
 | `/webinars` | Webinar program: delivery status, series coverage, registrations/attendance |
 | `/content` | Content production pipeline, post-type mix, branding campaign workstreams |
 | `/data` | Data Explorer: every source table with sorting, search, CSV export, record drill-down |
+| `/clients/mas-gla` | MAS GLA delivery dashboard — Initiatives, Projects, Tasks, Check-Ins (live from the MAS GLA base) |
+| `/clients/kasper` | Kasper delivery dashboard — same delivery spine, live from the Kasper base |
+
+### Active client engagements
+
+The **Active Clients** section surfaces per-client delivery dashboards for the two live
+engagements (MAS GLA and Kasper), each reading from that client's *own* Airtable base
+(declared in `src/lib/clients.ts`): task completion, delayed-task alerts, initiative and
+project status, and the latest client check-in. Task workflow fields are inline-editable.
+
+### Inline editing (write-back)
+
+Workflow fields — status/stage, owner, dates, notes — can be edited directly from the
+platform (in tables and the detail drawer); changes write back to Airtable via
+`/api/record`. Every write is authorized server-side against an editable-field allowlist
+(`AMAL_EDITABLE` in `src/lib/schema.ts` and the `editable` flags in `src/lib/clients.ts`),
+so only whitelisted fields on known tables can ever be changed. Requires the token to have
+the `data.records:write` scope.
 
 ## Features
 

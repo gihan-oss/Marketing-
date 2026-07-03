@@ -1,10 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { TABLES, airtableRecordUrl } from "@/lib/schema";
+import { AMAL_EDITABLE, TABLES, airtableRecordUrl } from "@/lib/schema";
 import type { Rec } from "@/lib/types";
 import { fmtDate } from "@/lib/format";
 import { useData } from "./DataProvider";
+import { EditableField } from "./EditableField";
 
 /**
  * Universal drill-down drawer.
@@ -115,13 +116,15 @@ function statusOf(r: Rec): string | null {
 }
 
 function RecordView({ record, onClose }: { record: Rec; onClose: () => void }) {
+  const { refresh } = useData();
   const def = TABLES[record.table];
+  const editable = new Set(AMAL_EDITABLE[record.table] ?? []);
   const rows = useMemo(
     () =>
       Object.entries(def.fields)
-        .map(([key, fd]) => ({ name: fd.name, value: record.fields[key], type: fd.type }))
-        .filter((row) => row.value !== null && row.value !== ""),
-    [def, record]
+        .map(([key, fd]) => ({ key, name: fd.name, value: record.fields[key], type: fd.type, field: fd }))
+        .filter((row) => editable.has(row.key) || (row.value !== null && row.value !== "")),
+    [def, record, editable]
   );
 
   return (
@@ -138,12 +141,24 @@ function RecordView({ record, onClose }: { record: Rec; onClose: () => void }) {
       <div className="drawer-body">
         <div className="field-list">
           {rows.map((row) => (
-            <div className="row" key={row.name}>
+            <div className="row" key={row.key} style={editable.has(row.key) ? { alignItems: "center" } : undefined}>
               <span className="k">{row.name}</span>
-              <span className="v">
-                {row.type === "date" || row.type === "dateTime"
-                  ? fmtDate(String(row.value))
-                  : String(row.value)}
+              <span className="v" style={editable.has(row.key) ? { minWidth: 200 } : undefined}>
+                {editable.has(row.key) ? (
+                  <EditableField
+                    source="amal"
+                    tableKey={record.table}
+                    recordId={record.id}
+                    fieldKey={row.key}
+                    field={row.field}
+                    value={row.value}
+                    onSaved={() => refresh()}
+                  />
+                ) : row.type === "date" || row.type === "dateTime" ? (
+                  fmtDate(String(row.value))
+                ) : (
+                  String(row.value)
+                )}
               </span>
             </div>
           ))}

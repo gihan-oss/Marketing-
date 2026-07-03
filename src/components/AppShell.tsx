@@ -18,6 +18,12 @@ const NAV = [
   { href: "/data", label: "Data Explorer", color: "var(--s7)" },
 ];
 
+// Active client engagements — live delivery dashboards from each client's base.
+const CLIENT_NAV = [
+  { href: "/clients/mas-gla", label: "MAS GLA", color: "var(--s4)" },
+  { href: "/clients/kasper", label: "Kasper", color: "var(--s6)" },
+];
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -42,6 +48,29 @@ export function AppShell({ children }: { children: ReactNode }) {
             {item.label}
           </Link>
         ))}
+        <div
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: "var(--muted)",
+            textTransform: "uppercase",
+            letterSpacing: "0.04em",
+            padding: "14px 10px 4px",
+          }}
+        >
+          Active Clients
+        </div>
+        {CLIENT_NAV.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="nav-link"
+            aria-current={pathname === item.href ? "page" : undefined}
+          >
+            <span className="dot" style={{ background: item.color }} />
+            {item.label}
+          </Link>
+        ))}
         <div className="sidebar-foot">
           <div>
             <span className="kbd">⌘J</span> AI assistant
@@ -57,6 +86,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav className="mobile-nav" aria-label="Pages">
           {NAV.map((item) => (
             <Link key={item.href} href={withQs(item.href)} aria-current={pathname === item.href ? "page" : undefined}>
+              {item.label}
+            </Link>
+          ))}
+          {CLIENT_NAV.map((item) => (
+            <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined}>
               {item.label}
             </Link>
           ))}
