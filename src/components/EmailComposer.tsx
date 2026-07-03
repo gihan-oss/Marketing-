@@ -41,6 +41,13 @@ export function EmailComposer() {
   const [confirming, setConfirming] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [templatesError, setTemplatesError] = useState<string | null>(null);
+  const [testEmail, setTestEmail] = useState("");
+  const [testState, setTestState] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!composer) return;
@@ -50,6 +57,11 @@ export function EmailComposer() {
     setConfirming(false);
     setVerifiedOnly(false);
     setTemplatesError(null);
+    setTestState("idle");
+    setTestMsg(null);
+    setPreviewOpen(false);
+    setPreviewHtml(null);
+    setPreviewError(null);
     fetch("/api/email/templates")
       .then((r) => r.json())
       .then((b) => {
@@ -63,6 +75,29 @@ export function EmailComposer() {
         setTemplatesError("Couldn’t reach the templates API.");
       });
   }, [composer]);
+
+  // Load the HTML preview whenever the preview is open and the template changes.
+  useEffect(() => {
+    if (!previewOpen || !templateId) return;
+    let cancelled = false;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    fetch(`/api/email/preview?templateId=${templateId}`)
+      .then((r) => r.json())
+      .then((b) => {
+        if (cancelled) return;
+        if (b.html) setPreviewHtml(b.html);
+        else {
+          setPreviewHtml(null);
+          setPreviewError(b.error ?? "Preview unavailable.");
+        }
+      })
+      .catch(() => !cancelled && setPreviewError("Couldn’t load the preview."))
+      .finally(() => !cancelled && setPreviewLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [previewOpen, templateId]);
 
   const recipients = composer ?? [];
   const valid = useMemo(() => recipients.filter((r) => r.email && r.email.includes("@")), [recipients]);
@@ -113,6 +148,30 @@ export function EmailComposer() {
     } catch (err) {
       setResult({ sent: 0, total: sendList.length, error: err instanceof Error ? err.message : "Send failed" });
       setState("error");
+    }
+  };
+
+  const sendTest = async () => {
+    if (!templateId || !testEmail.includes("@")) {
+      setTestState("error");
+      setTestMsg("Enter a valid email to send a test to.");
+      return;
+    }
+    setTestState("sending");
+    setTestMsg(null);
+    try {
+      const res = await fetch("/api/email/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId, email: testEmail, firstName: "there" }),
+      });
+      const b = await res.json();
+      if (!res.ok) throw new Error(b?.error ?? `Test failed (${res.status})`);
+      setTestState("done");
+      setTestMsg(`Test sent to ${testEmail}.`);
+    } catch (err) {
+      setTestState("error");
+      setTestMsg(err instanceof Error ? err.message : "Test send failed");
     }
   };
 
@@ -185,6 +244,72 @@ export function EmailComposer() {
                   </select>
                 )}
                 {chosen && <p className="card-note" style={{ marginTop: 6 }}>Subject: “{chosen.subject}”</p>}
+
+                {chosen && (
+                  <div style={{ marginTop: 8 }}>
+                    <button className="btn" onClick={() => setPreviewOpen((v) => !v)}>
+                      {previewOpen ? "Hide preview" : "👁 Preview email"}
+                    </button>
+                    {previewOpen && (
+                      <div style={{ marginTop: 8 }}>
+                        {previewLoading ? (
+                          <div className="skeleton" style={{ height: 300 }} />
+                        ) : previewError ? (
+                          <div className="error-banner">Couldn’t load preview: {previewError}</div>
+                        ) : previewHtml ? (
+                          <iframe
+                            title="Email preview"
+                            srcDoc={previewHtml}
+                            sandbox=""
+                            style={{
+                              width: "100%",
+                              height: 420,
+                              border: "1px solid var(--border)",
+                              borderRadius: 8,
+                              background: "#fff",
+                            }}
+                          />
+                        ) : null}
+                        <p className="card-note" style={{ marginTop: 4 }}>
+                          Merge tags like <code>{"{{ contact.FIRSTNAME }}"}</code> show as-is here; they fill in per
+                          recipient on send.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {chosen && (
+                  <div style={{ marginTop: 12 }}>
+                    <p className="card-title">Send a test to yourself</p>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <input
+                        className="control"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={testEmail}
+                        onChange={(e) => setTestEmail(e.target.value)}
+                        style={{ flex: 1, minWidth: 180 }}
+                        aria-label="Test recipient email"
+                      />
+                      <button
+                        className="btn"
+                        onClick={sendTest}
+                        disabled={testState === "sending" || !testEmail.includes("@")}
+                      >
+                        {testState === "sending" ? "Sending…" : "Send test"}
+                      </button>
+                    </div>
+                    {testMsg && (
+                      <p
+                        className="card-note"
+                        style={{ marginTop: 6, color: testState === "error" ? "var(--danger, #b3261e)" : "var(--ok, #1a7f37)" }}
+                      >
+                        {testMsg}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>

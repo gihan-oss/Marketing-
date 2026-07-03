@@ -49,6 +49,24 @@ export async function listTemplates(): Promise<BrevoTemplate[]> {
   }));
 }
 
+export interface BrevoTemplateDetail {
+  id: number;
+  name: string;
+  subject: string;
+  htmlContent: string;
+}
+
+/** Fetch one template including its rendered HTML body (for preview). */
+export async function getTemplate(id: number): Promise<BrevoTemplateDetail> {
+  const t = (await brevo(`/smtp/templates/${id}`)) as {
+    id: number;
+    name: string;
+    subject: string;
+    htmlContent: string;
+  };
+  return { id: t.id, name: t.name, subject: t.subject, htmlContent: t.htmlContent };
+}
+
 /** Ensure the recipient exists as a contact with FIRSTNAME so templates that
  *  reference {{ contact.FIRSTNAME }} personalize correctly. Best-effort. */
 async function upsertContact(email: string, firstName?: string, lastName?: string) {
