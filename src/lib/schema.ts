@@ -32,6 +32,7 @@ export const AMAL_EDITABLE: Record<TableKey, string[]> = {
   campaigns: ["status", "category"],
   strategy: ["status", "notes"],
   people: ["role", "email"],
+  social: [], // synced from automation — read-only in the platform
 };
 
 export interface TableDef {
@@ -53,7 +54,8 @@ export type TableKey =
   | "content"
   | "campaigns"
   | "strategy"
-  | "people";
+  | "people"
+  | "social";
 
 export const TABLES: Record<TableKey, TableDef> = {
   pipeline: {
@@ -276,6 +278,40 @@ export const TABLES: Record<TableKey, TableDef> = {
         options: ["Done", "Campaign Still Ongoing"],
       },
       notes: { id: "fldte9dXlUi6IJgZU", name: "Notes", type: "multilineText" },
+    },
+  },
+  social: {
+    id: "tblJ4ILxjD1yTG7ef",
+    key: "social",
+    name: "Social Posts",
+    description:
+      "Published social posts and engagement, synced from LinkedIn / Instagram / Facebook via Make.com.",
+    primaryField: "Caption",
+    dateField: "Published",
+    fields: {
+      caption: { id: "fldgR5rSm5k1wwB8B", name: "Caption", type: "singleLineText" },
+      channel: {
+        id: "fld17hxFoWeh1yulV",
+        name: "Channel",
+        type: "singleSelect",
+        options: ["LinkedIn", "Instagram", "Facebook"],
+      },
+      postType: {
+        id: "fldJQdS3w66Mq23TN",
+        name: "Post Type",
+        type: "singleSelect",
+        options: ["Image", "Video", "Reel", "Carousel", "Text", "Story", "Link"],
+      },
+      published: { id: "fldnj9B2YAyDLDHyi", name: "Published", type: "dateTime" },
+      permalink: { id: "fld5FCOUIgglq6Ng5", name: "Permalink", type: "url" },
+      mediaUrl: { id: "fldD9nvTIq43iFg0v", name: "Media URL", type: "url" },
+      likes: { id: "fldgwroxXqgGMNf86", name: "Likes", type: "number" },
+      comments: { id: "fldu3fpkbx7CWrNGE", name: "Comments", type: "number" },
+      shares: { id: "fldAl0Ap7KR8cUUrk", name: "Shares", type: "number" },
+      reach: { id: "fldlzaPAojOUy2ez0", name: "Reach", type: "number" },
+      impressions: { id: "fldBrSQ3zDDn7TaY7", name: "Impressions", type: "number" },
+      externalId: { id: "fld2picTU19wxRFWJ", name: "External ID", type: "singleLineText" },
+      lastSynced: { id: "fldqDkPltXFraw8Og", name: "Last Synced", type: "dateTime" },
     },
   },
   people: {
