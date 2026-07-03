@@ -37,6 +37,7 @@ export default function ProspectsPage() {
                       email: String(r.fields.email),
                       name: r.label,
                       firstName: typeof r.fields.firstName === "string" ? r.fields.firstName : undefined,
+                      emailStatus: typeof r.fields.emailStatus === "string" ? r.fields.emailStatus : undefined,
                     }))
                   )
                 }
