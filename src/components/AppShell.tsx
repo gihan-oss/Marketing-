@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useData } from "./DataProvider";
 import { Drawer } from "./Drawer";
 import { Assistant } from "./Assistant";
+import { EmailComposer } from "./EmailComposer";
 import { dimensionValues, activeFilterCount } from "@/lib/filters";
 import { fmtDate } from "@/lib/format";
 
@@ -101,6 +102,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <Drawer />
       <Assistant />
+      <EmailComposer />
     </div>
   );
 }

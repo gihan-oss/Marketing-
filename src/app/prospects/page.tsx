@@ -6,14 +6,19 @@ import { ChartCard, StageFunnel, CategoryBars, Donut, SERIES } from "@/component
 import { DataTable } from "@/components/DataTable";
 import { computeExecutiveMetrics, groupByOption, OUTREACH_STAGES } from "@/lib/metrics";
 import { TABLES } from "@/lib/schema";
+import { useData } from "@/components/DataProvider";
 
 export default function ProspectsPage() {
+  const { setComposer } = useData();
   return (
     <PageState
       title="Outreach"
       subtitle="Cold-outreach prospect pool: verification, funnel from New to Booked, segments and regions."
       render={(t) => {
         const metrics = computeExecutiveMetrics(t).filter((m) => m.table === "prospects");
+        const emailable = t.prospects.filter(
+          (r) => typeof r.fields.email === "string" && r.fields.email.includes("@")
+        );
         const funnel = groupByOption(t.prospects, "outreachStatus", OUTREACH_STAGES);
         const emailStatus = groupByOption(t.prospects, "emailStatus", TABLES.prospects.fields.emailStatus.options!);
         const regionMix = groupByOption(t.prospects, "region", TABLES.prospects.fields.region.options!);
@@ -21,6 +26,25 @@ export default function ProspectsPage() {
 
         return (
           <>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button
+                className="btn btn-primary"
+                disabled={emailable.length === 0}
+                onClick={() =>
+                  setComposer(
+                    emailable.map((r) => ({
+                      recordId: r.id,
+                      email: String(r.fields.email),
+                      name: r.label,
+                      firstName: typeof r.fields.firstName === "string" ? r.fields.firstName : undefined,
+                    }))
+                  )
+                }
+                title="Compose an outreach email to the prospects matching the current filters"
+              >
+                ✉ Email {emailable.length} filtered prospect{emailable.length === 1 ? "" : "s"}
+              </button>
+            </div>
             <div className="grid grid-kpi">
               {metrics.map((m) => (
                 <KpiCard key={m.id} metric={m} />
