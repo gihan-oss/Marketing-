@@ -15,6 +15,7 @@ const NAV = [
   { href: "/prospects", label: "Outreach", color: "var(--s3)" },
   { href: "/webinars", label: "Webinars", color: "var(--s5)" },
   { href: "/content", label: "Content & Campaigns", color: "var(--s8)" },
+  { href: "/social", label: "Published Posts", color: "var(--s6)" },
   { href: "/data", label: "Data Explorer", color: "var(--s7)" },
 ];
 

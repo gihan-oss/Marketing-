@@ -67,7 +67,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setSnapshot({
         fetchedAt: new Date().toISOString(),
         error: "Could not reach the data API.",
-        tables: { pipeline: [], prospects: [], webinars: [], content: [], campaigns: [], strategy: [], people: [] },
+        tables: { pipeline: [], prospects: [], webinars: [], content: [], campaigns: [], strategy: [], people: [], social: [] },
       });
     } finally {
       setLoading(false);
