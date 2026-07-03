@@ -40,6 +40,7 @@ export function EmailComposer() {
   const [result, setResult] = useState<{ sent: number; total: number; error?: string } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!composer) return;
@@ -48,14 +49,19 @@ export function EmailComposer() {
     setResult(null);
     setConfirming(false);
     setVerifiedOnly(false);
+    setTemplatesError(null);
     fetch("/api/email/templates")
       .then((r) => r.json())
       .then((b) => {
         setConfigured(b.configured);
         setTemplates(b.templates ?? []);
+        setTemplatesError(b.error ?? null);
         if (b.templates?.length) setTemplateId(b.templates[0].id);
       })
-      .catch(() => setTemplates([]));
+      .catch(() => {
+        setTemplates([]);
+        setTemplatesError("Couldn’t reach the templates API.");
+      });
   }, [composer]);
 
   const recipients = composer ?? [];
@@ -155,7 +161,15 @@ export function EmailComposer() {
                 {templates === null ? (
                   <div className="skeleton" style={{ height: 32 }} />
                 ) : templates.length === 0 ? (
-                  <p className="card-note">No active templates found in Brevo.</p>
+                  templatesError ? (
+                    <div className="error-banner">
+                      Brevo rejected the request: {templatesError}. This usually means the{" "}
+                      <code>BREVO_API_KEY</code> is wrong, or your Brevo account restricts API access by IP
+                      (Brevo → Security → Authorized IPs). Fix the key/IP and reopen this panel.
+                    </div>
+                  ) : (
+                    <p className="card-note">No active templates found in Brevo.</p>
+                  )
                 ) : (
                   <select
                     className="control"
