@@ -33,6 +33,17 @@ interface DataContextValue {
   setDrawer: (d: DrawerState) => void;
   assistantOpen: boolean;
   setAssistantOpen: (open: boolean) => void;
+  /** Recipients queued for the email composer, or null when it's closed. */
+  composer: EmailRecipient[] | null;
+  setComposer: (r: EmailRecipient[] | null) => void;
+}
+
+export interface EmailRecipient {
+  recordId?: string;
+  email: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -52,6 +63,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [drawer, setDrawer] = useState<DrawerState>(null);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [composer, setComposer] = useState<EmailRecipient[] | null>(null);
 
   const filters = useMemo(
     () => filtersFromSearchParams(new URLSearchParams(searchParams.toString())),
@@ -124,8 +136,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDrawer,
       assistantOpen,
       setAssistantOpen,
+      composer,
+      setComposer,
     }),
-    [snapshot, loading, load, filters, setFilter, clearFilters, tables, drawer, assistantOpen]
+    [snapshot, loading, load, filters, setFilter, clearFilters, tables, drawer, assistantOpen, composer]
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

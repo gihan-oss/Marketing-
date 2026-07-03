@@ -116,7 +116,7 @@ function statusOf(r: Rec): string | null {
 }
 
 function RecordView({ record, onClose }: { record: Rec; onClose: () => void }) {
-  const { refresh } = useData();
+  const { refresh, setComposer } = useData();
   const def = TABLES[record.table];
   const editable = new Set(AMAL_EDITABLE[record.table] ?? []);
   const rows = useMemo(
@@ -163,15 +163,33 @@ function RecordView({ record, onClose }: { record: Rec; onClose: () => void }) {
             </div>
           ))}
         </div>
-        <a
-          className="btn"
-          href={airtableRecordUrl(record.table, record.id)}
-          target="_blank"
-          rel="noreferrer"
-          style={{ alignSelf: "flex-start" }}
-        >
-          Open in Airtable ↗
-        </a>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {record.table === "prospects" && typeof record.fields.email === "string" && record.fields.email && (
+            <button
+              className="btn btn-primary"
+              onClick={() =>
+                setComposer([
+                  {
+                    recordId: record.id,
+                    email: String(record.fields.email),
+                    name: record.label,
+                    firstName: typeof record.fields.firstName === "string" ? record.fields.firstName : undefined,
+                  },
+                ])
+              }
+            >
+              ✉ Send email
+            </button>
+          )}
+          <a
+            className="btn"
+            href={airtableRecordUrl(record.table, record.id)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open in Airtable ↗
+          </a>
+        </div>
       </div>
     </>
   );
