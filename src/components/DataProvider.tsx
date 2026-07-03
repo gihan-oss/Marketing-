@@ -44,6 +44,8 @@ export interface EmailRecipient {
   name?: string;
   firstName?: string;
   lastName?: string;
+  /** Airtable Email Status: "Verified" | "Unverified" | "Bounced" (undefined if unknown). */
+  emailStatus?: string;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);

@@ -9,6 +9,20 @@ interface Template {
   subject: string;
 }
 
+/** Normalize an Airtable Email Status into a known bucket. */
+type MailStatus = "verified" | "unverified" | "bounced";
+function mailStatus(s?: string): MailStatus {
+  const v = (s ?? "").toLowerCase();
+  if (v === "verified") return "verified";
+  if (v === "bounced") return "bounced";
+  return "unverified";
+}
+const STATUS_STYLE: Record<MailStatus, { label: string; bg: string; fg: string }> = {
+  verified: { label: "Verified", bg: "var(--ok-bg, #e6f4ea)", fg: "var(--ok, #1a7f37)" },
+  unverified: { label: "Unverified", bg: "var(--warning-bg, #fdf3e0)", fg: "var(--warning, #9a6700)" },
+  bounced: { label: "Bounced", bg: "var(--danger-bg, #fbe9e7)", fg: "var(--danger, #b3261e)" },
+};
+
 /**
  * Outreach email composer. Opens over the app when recipients are queued
  * (from a prospect drawer or a bulk "email selected" action). Lets you pick
@@ -25,6 +39,7 @@ export function EmailComposer() {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [result, setResult] = useState<{ sent: number; total: number; error?: string } | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
 
   useEffect(() => {
     if (!composer) return;
@@ -32,6 +47,7 @@ export function EmailComposer() {
     setState("idle");
     setResult(null);
     setConfirming(false);
+    setVerifiedOnly(false);
     fetch("/api/email/templates")
       .then((r) => r.json())
       .then((b) => {
@@ -44,6 +60,23 @@ export function EmailComposer() {
 
   const recipients = composer ?? [];
   const valid = useMemo(() => recipients.filter((r) => r.email && r.email.includes("@")), [recipients]);
+
+  // Deliverability breakdown of the valid recipients.
+  const counts = useMemo(() => {
+    const c = { verified: 0, unverified: 0, bounced: 0 };
+    for (const r of valid) c[mailStatus(r.emailStatus)] += 1;
+    return c;
+  }, [valid]);
+  const hasStatus = valid.some((r) => r.emailStatus);
+  const risky = counts.unverified + counts.bounced;
+
+  // The set that will actually be sent to — narrowed by the "Verified only" toggle.
+  const sendList = useMemo(
+    () => (verifiedOnly ? valid.filter((r) => mailStatus(r.emailStatus) === "verified") : valid),
+    [valid, verifiedOnly]
+  );
+  const sendRisky = sendList.filter((r) => mailStatus(r.emailStatus) !== "verified").length;
+
   const chosen = templates?.find((t) => t.id === templateId);
 
   if (!composer) return null;
@@ -55,7 +88,7 @@ export function EmailComposer() {
     if (mode === "schedule") {
       if (!when) {
         setState("error");
-        setResult({ sent: 0, total: valid.length, error: "Pick a date & time to schedule." });
+        setResult({ sent: 0, total: sendList.length, error: "Pick a date & time to schedule." });
         return;
       }
       scheduledAt = new Date(when).toISOString();
@@ -64,7 +97,7 @@ export function EmailComposer() {
       const res = await fetch("/api/email/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ templateId, recipients: valid, scheduledAt }),
+        body: JSON.stringify({ templateId, recipients: sendList, scheduledAt }),
       });
       const b = await res.json();
       if (!res.ok) throw new Error(b?.error ?? `Send failed (${res.status})`);
@@ -72,7 +105,7 @@ export function EmailComposer() {
       setState("done");
       void refresh();
     } catch (err) {
-      setResult({ sent: 0, total: valid.length, error: err instanceof Error ? err.message : "Send failed" });
+      setResult({ sent: 0, total: sendList.length, error: err instanceof Error ? err.message : "Send failed" });
       setState("error");
     }
   };
@@ -162,17 +195,48 @@ export function EmailComposer() {
               </div>
 
               <div>
-                <p className="card-title">Recipients ({valid.length})</p>
+                <p className="card-title">Recipients ({sendList.length})</p>
+
+                {hasStatus && (
+                  <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, margin: "0 0 8px" }}>
+                    <span style={{ display: "inline-flex", gap: 6, fontSize: 12 }}>
+                      <StatusChip status="verified" n={counts.verified} />
+                      {counts.unverified > 0 && <StatusChip status="unverified" n={counts.unverified} />}
+                      {counts.bounced > 0 && <StatusChip status="bounced" n={counts.bounced} />}
+                    </span>
+                    {risky > 0 && (
+                      <label style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 13, marginLeft: "auto" }}>
+                        <input type="checkbox" checked={verifiedOnly} onChange={(e) => setVerifiedOnly(e.target.checked)} />
+                        Verified only
+                      </label>
+                    )}
+                  </div>
+                )}
+
+                {sendRisky > 0 && (
+                  <div
+                    className="error-banner"
+                    style={{ background: "var(--warning-bg)", color: "var(--warning)", borderColor: "transparent", marginBottom: 8 }}
+                  >
+                    {sendRisky} recipient{sendRisky === 1 ? " is" : "s are"} unverified or bounced. Emailing them can hurt
+                    your sender reputation — turn on “Verified only” to skip them.
+                  </div>
+                )}
+
                 <div style={{ maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-                  {valid.slice(0, 50).map((r) => (
-                    <div key={r.email} className="record-row" style={{ cursor: "default" }}>
-                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {sendList.slice(0, 50).map((r) => (
+                    <div key={r.email} className="record-row" style={{ cursor: "default", gap: 8 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>
                         {r.name || r.firstName || "—"}
                       </span>
-                      <span className="badge">{r.email}</span>
+                      <span className="badge" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 180 }}>
+                        {r.email}
+                      </span>
+                      {r.emailStatus && <StatusChip status={mailStatus(r.emailStatus)} />}
                     </div>
                   ))}
-                  {valid.length > 50 && <p className="card-note">…and {valid.length - 50} more</p>}
+                  {sendList.length > 50 && <p className="card-note">…and {sendList.length - 50} more</p>}
+                  {sendList.length === 0 && <p className="card-note">No recipients match “Verified only”.</p>}
                 </div>
               </div>
 
@@ -181,16 +245,17 @@ export function EmailComposer() {
               {!confirming ? (
                 <button
                   className="btn btn-primary"
-                  disabled={!templateId || valid.length === 0 || state === "sending"}
+                  disabled={!templateId || sendList.length === 0 || state === "sending"}
                   onClick={() => setConfirming(true)}
                 >
-                  {mode === "schedule" ? "Schedule" : "Send"} {valid.length} email{valid.length === 1 ? "" : "s"}
+                  {mode === "schedule" ? "Schedule" : "Send"} {sendList.length} email{sendList.length === 1 ? "" : "s"}
                 </button>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <div className="error-banner" style={{ background: "var(--warning-bg)", color: "var(--warning)", borderColor: "transparent" }}>
-                    This will {mode === "schedule" ? "schedule" : "send"} a real email to {valid.length} recipient
-                    {valid.length === 1 ? "" : "s"} from your verified sender. Confirm?
+                    This will {mode === "schedule" ? "schedule" : "send"} a real email to {sendList.length} recipient
+                    {sendList.length === 1 ? "" : "s"} from your verified sender.
+                    {sendRisky > 0 && ` ${sendRisky} of them ${sendRisky === 1 ? "is" : "are"} not verified.`} Confirm?
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button className="btn btn-primary" onClick={send} disabled={state === "sending"}>
@@ -207,5 +272,29 @@ export function EmailComposer() {
         </div>
       </aside>
     </>
+  );
+}
+
+/** Small colored pill for an email deliverability status. */
+function StatusChip({ status, n }: { status: MailStatus; n?: number }) {
+  const s = STATUS_STYLE[status];
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "1px 8px",
+        borderRadius: 999,
+        fontSize: 11,
+        fontWeight: 600,
+        background: s.bg,
+        color: s.fg,
+        whiteSpace: "nowrap",
+      }}
+      title={`${s.label} email`}
+    >
+      {typeof n === "number" ? `${n} ${s.label}` : s.label}
+    </span>
   );
 }

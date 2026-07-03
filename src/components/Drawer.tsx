@@ -174,6 +174,7 @@ function RecordView({ record, onClose }: { record: Rec; onClose: () => void }) {
                     email: String(record.fields.email),
                     name: record.label,
                     firstName: typeof record.fields.firstName === "string" ? record.fields.firstName : undefined,
+                    emailStatus: typeof record.fields.emailStatus === "string" ? record.fields.emailStatus : undefined,
                   },
                 ])
               }
