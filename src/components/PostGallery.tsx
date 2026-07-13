@@ -81,20 +81,32 @@ function PostCard({ rec, onOpen }: { rec: Rec; onOpen: () => void }) {
             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
           />
         ) : (
+          // No usable image (e.g. LinkedIn) → a branded tile showing the post
+          // text, so the card is still informative rather than an empty logo.
           <div
             style={{
               width: "100%",
               height: "100%",
+              padding: "14px 16px",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
               color: cs.fg,
-              fontSize: 40,
-              fontWeight: 800,
-              opacity: 0.9,
+              fontSize: 14,
+              lineHeight: "20px",
+              fontWeight: 600,
+              overflow: "hidden",
             }}
           >
-            {cs.label}
+            <span
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 5,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+            >
+              {caption}
+            </span>
           </div>
         )}
         <span
