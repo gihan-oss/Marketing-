@@ -11,16 +11,15 @@ import { dimensionValues, activeFilterCount } from "@/lib/filters";
 import { fmtDate } from "@/lib/format";
 
 const NAV = [
-  { href: "/", label: "Command Center", color: "var(--s1)" },
-  { href: "/pipeline", label: "Sales Pipeline", color: "var(--s2)" },
+  { href: "/", label: "Dashboard", color: "var(--s1)" },
   { href: "/prospects", label: "Outreach", color: "var(--s3)" },
   { href: "/webinars", label: "Webinars", color: "var(--s5)" },
-  { href: "/content", label: "Content & Campaigns", color: "var(--s8)" },
   { href: "/social", label: "Published Posts", color: "var(--s6)" },
-  { href: "/data", label: "Data Explorer", color: "var(--s7)" },
+  { href: "/calendar", label: "Content Calendar", color: "var(--s8)" },
+  { href: "/production", label: "Content Production", color: "var(--s2)" },
 ];
 
-// Active client engagements — live delivery dashboards from each client's base.
+// Active client engagements — the marketing view for each client.
 const CLIENT_NAV = [
   { href: "/clients/mas-gla", label: "MAS GLA", color: "var(--s4)" },
   { href: "/clients/kasper", label: "Kasper", color: "var(--s6)" },
@@ -31,13 +30,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const qs = searchParams.toString();
   const withQs = (href: string) => (qs ? `${href}?${qs}` : href);
+  // Active Clients collapses into a single button + dropdown so clients don't
+  // splay across the sidebar; opens automatically when on a client page.
+  const onClient = pathname.startsWith("/clients/");
+  const [clientsOpen, setClientsOpen] = useState(onClient);
 
   return (
     <div className="shell">
       <nav className="sidebar" aria-label="Primary">
         <div className="sidebar-brand">
           Amal &amp; Company
-          <span>Marketing Analytics</span>
+          <span>Marketing Workspace</span>
         </div>
         {NAV.map((item) => (
           <Link
@@ -50,29 +53,41 @@ export function AppShell({ children }: { children: ReactNode }) {
             {item.label}
           </Link>
         ))}
-        <div
+        <button
+          type="button"
+          className="nav-link"
+          onClick={() => setClientsOpen((v) => !v)}
+          aria-expanded={clientsOpen}
           style={{
-            fontSize: 11,
-            fontWeight: 600,
-            color: "var(--muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.04em",
-            padding: "14px 10px 4px",
+            marginTop: 8,
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            background: "none",
+            border: "none",
+            textAlign: "left",
+            cursor: "pointer",
+            font: "inherit",
+            color: onClient ? "var(--text)" : undefined,
           }}
         >
+          <span className="dot" style={{ background: "var(--s4)" }} />
           Active Clients
-        </div>
-        {CLIENT_NAV.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="nav-link"
-            aria-current={pathname === item.href ? "page" : undefined}
-          >
-            <span className="dot" style={{ background: item.color }} />
-            {item.label}
-          </Link>
-        ))}
+          <span style={{ marginLeft: "auto", opacity: 0.7 }}>{clientsOpen ? "▾" : "▸"}</span>
+        </button>
+        {clientsOpen &&
+          CLIENT_NAV.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="nav-link"
+              aria-current={pathname === item.href ? "page" : undefined}
+              style={{ paddingLeft: 26 }}
+            >
+              <span className="dot" style={{ background: item.color }} />
+              {item.label}
+            </Link>
+          ))}
         <div className="sidebar-foot">
           <div>
             <span className="kbd">⌘J</span> AI assistant
