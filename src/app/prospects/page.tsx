@@ -43,7 +43,7 @@ export default function ProspectsPage() {
                 }
                 title="Compose an outreach email to the prospects matching the current filters"
               >
-                ✉ Email {emailable.length} filtered prospect{emailable.length === 1 ? "" : "s"}
+                Email {emailable.length} filtered prospect{emailable.length === 1 ? "" : "s"}
               </button>
             </div>
             <div className="grid grid-kpi">

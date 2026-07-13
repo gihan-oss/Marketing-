@@ -33,7 +33,7 @@ export function ProductionBoard({ records }: { records: Rec[] }) {
           Click a card to edit it (status, script, presenter…). New pieces start in <strong>Ideas</strong>.
         </p>
         <button className="btn btn-primary" onClick={() => setCreating(true)}>
-          ＋ New idea
+          + New idea
         </button>
       </div>
 
@@ -83,7 +83,7 @@ export function ProductionBoard({ records }: { records: Rec[] }) {
                       </button>
                       {r.fields.script ? (
                         <button className="btn" style={{ marginTop: 8, fontSize: 12, padding: "3px 10px" }} onClick={() => setSendFor(r)}>
-                          ✉ Send for approval
+                          Send for approval
                         </button>
                       ) : null}
                     </div>

@@ -248,7 +248,7 @@ export function EmailComposer() {
                 {chosen && (
                   <div style={{ marginTop: 8 }}>
                     <button className="btn" onClick={() => setPreviewOpen((v) => !v)}>
-                      {previewOpen ? "Hide preview" : "👁 Preview email"}
+                      {previewOpen ? "Hide preview" : "Preview email"}
                     </button>
                     {previewOpen && (
                       <div style={{ marginTop: 8 }}>

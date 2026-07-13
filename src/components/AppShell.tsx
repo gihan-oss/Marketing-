@@ -17,6 +17,7 @@ const NAV = [
   { href: "/social", label: "Published Posts" },
   { href: "/calendar", label: "Content Calendar" },
   { href: "/production", label: "Content Production" },
+  { href: "/emails", label: "Email Studio" },
 ];
 
 // Active client engagements — the marketing view for each client.
