@@ -1,3 +1,7 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    { "path": "/api/social/sync", "schedule": "0 7 * * *" },
+    { "path": "/api/social/publish", "schedule": "30 7 * * *" }
+  ]
 }

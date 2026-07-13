@@ -64,6 +64,7 @@ DataProvider (client)   — global filters (URL-synced), drill-down state, theme
 | `/prospects` | Outreach: pool size, deliverability, reply rate, outreach funnel, segments/regions |
 | `/webinars` | Webinar program: delivery status, series coverage, registrations/attendance |
 | `/content` | Content production pipeline, post-type mix, branding campaign workstreams |
+| `/social` | Published Posts — live social engagement synced from LinkedIn/Instagram/Facebook |
 | `/data` | Data Explorer: every source table with sorting, search, CSV export, record drill-down |
 | `/clients/mas-gla` | MAS GLA delivery dashboard — Initiatives, Projects, Tasks, Check-Ins (live from the MAS GLA base) |
 | `/clients/kasper` | Kasper delivery dashboard — same delivery spine, live from the Kasper base |
@@ -83,6 +84,16 @@ platform (in tables and the detail drawer); changes write back to Airtable via
 (`AMAL_EDITABLE` in `src/lib/schema.ts` and the `editable` flags in `src/lib/clients.ts`),
 so only whitelisted fields on known tables can ever be changed. Requires the token to have
 the `data.records:write` scope.
+
+### Social automation (LinkedIn / Instagram / Facebook)
+
+A built-in engine (`src/lib/social/`) syncs published-post engagement from each
+connected channel into the **Social Posts** table and can publish approved,
+scheduled **Content** rows back out. It runs on a Vercel Cron schedule (and a
+manual **Sync now** button), upserts idempotently by External ID, retries
+transient failures, and isolates errors per channel. Every channel is env-gated
+and optional; publishing is off unless explicitly enabled. Full setup and field
+mapping: [`docs/social-automation.md`](docs/social-automation.md).
 
 ## Features
 
@@ -108,6 +119,10 @@ npm run dev             # http://localhost:3000
 | `AIRTABLE_API_KEY` | yes | Personal access token with `data.records:read` on the marketing base |
 | `AIRTABLE_BASE_ID` | no | Defaults to `appcDlJ12Cje9tUSG` |
 | `ANTHROPIC_API_KEY` | no | Enables the executive AI assistant |
+| `BREVO_API_KEY` | no | Enables the outreach send/schedule composer |
+| `EMAIL_ASSET_BASE_URL` | no | Public host for email template images (used by `npm run build:email`) |
+| `CRON_SECRET` | no | Protects the social automation endpoints (set in production) |
+| `LINKEDIN_*` / `INSTAGRAM_*` / `FACEBOOK_*` | no | Per-channel social automation credentials — see [`docs/social-automation.md`](docs/social-automation.md) |
 
 Without `AIRTABLE_API_KEY` the app runs and shows a setup notice — it never falls back to
 fake data.

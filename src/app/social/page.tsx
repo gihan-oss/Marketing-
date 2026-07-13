@@ -4,7 +4,7 @@ import { PageState } from "@/components/PageState";
 import { KpiCard } from "@/components/KpiCard";
 import { ChartCard, CategoryBars, Donut, TrendArea, SERIES } from "@/components/charts";
 import { DataTable } from "@/components/DataTable";
-import { EmptyState } from "@/components/states";
+import { SocialAutomationNotice } from "@/components/SocialAutomationNotice";
 import { TABLES } from "@/lib/schema";
 import { groupByOption, monthlySeries } from "@/lib/metrics";
 import { fmtNumber } from "@/lib/format";
@@ -23,12 +23,7 @@ export default function SocialPage() {
       render={(t) => {
         const posts = t.social;
         if (posts.length === 0) {
-          return (
-            <EmptyState
-              title="No posts synced yet"
-              body="Once your LinkedIn, Instagram, and Facebook accounts are connected in Make.com, published posts and their engagement land here automatically. Connect the accounts in Make → Connections, and the sync will populate this view."
-            />
-          );
+          return <SocialAutomationNotice variant="empty" />;
         }
 
         const engagement = (r: Rec) =>
@@ -61,6 +56,7 @@ export default function SocialPage() {
 
         return (
           <>
+            <SocialAutomationNotice />
             <div className="grid grid-kpi">
               {metrics.map((mm) => (
                 <KpiCard key={mm.id} metric={mm} />
