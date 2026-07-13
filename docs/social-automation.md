@@ -1,74 +1,140 @@
 # Social automation — LinkedIn / Instagram / Facebook
 
-This platform reads published social posts and their engagement from the
-**Social Posts** table in the *Amal & Company Marketing* Airtable base
-(`tblJ4ILxjD1yTG7ef`) and shows them on the **Published Posts** page. That
-table is filled by an automation in **Make.com** — the platform never talks to
-the social networks directly (those require your account's authorization).
-
-## Phase 1 (this PR): pull posted content + metrics — read-only
+This platform now ships a **built-in social automation engine** that syncs
+published posts and their engagement from LinkedIn / Instagram / Facebook into
+the **Social Posts** table (`tblJ4ILxjD1yTG7ef`) of the *Amal & Company
+Marketing* base, and — when explicitly enabled — publishes approved,
+scheduled **Content** rows back out to a channel. The **Published Posts** page
+reads that table.
 
 ```
 LinkedIn / Instagram Business / Facebook Page
-        │  (Make connectors, authorized by you)
+        │  official Graph / REST APIs (server-side tokens)
         ▼
-   Make.com scenario  ──►  Airtable "Social Posts" (upsert by External ID)
-                                   │
-                                   ▼
-                     Published Posts page in the dashboard
+   src/lib/social  ── engine (fetch → normalize → upsert; retries; logging)
+        │                     ▲
+        │                     │  Vercel Cron (daily) or "Sync now" button
+        ▼                     │
+   Airtable "Social Posts" ───┘  (upsert by External ID — idempotent)
+        │
+        ▼
+   Published Posts page + /api/social/status
 ```
 
-### One-time setup (only you can do these — they need your logins)
+The engine talks to the platforms directly with server-side tokens rather than
+routing through a no-code tool, so scheduling, retries, error isolation, and
+logging all live in the codebase and are testable. (A Make.com scenario, shown
+at the bottom, remains a valid no-code alternative if you prefer not to hold
+tokens on the server.)
 
-1. **Make → Connections**
-   - Reconnect **Airtable** (the existing connection's token has expired).
-   - Add **Facebook Pages**, **Instagram for Business**, and **LinkedIn**
-     connections (Make walks you through each OAuth).
-2. **Account types the platforms require**
-   - Facebook: a **Page** you administer (not a personal profile).
-   - Instagram: a **Business/Creator** account linked to that Page.
-   - LinkedIn: your profile and/or a **Company Page** you administer.
-3. **Plan** — the Free plan allows 2 scenarios / 1,000 ops / 15-min polling.
-   A daily metrics sync across 3 channels fits, but headroom is tight; a paid
-   tier is recommended once publishing (Phase 2) is added.
+## Architecture
 
-### The scenario (built once connections exist)
+| File | Role |
+| --- | --- |
+| `src/lib/social/core.ts` | Types, retry-with-backoff, structured logging, run-report ring buffer |
+| `src/lib/social/providers.ts` | LinkedIn / Instagram / Facebook API clients (each gated on its own env credentials) |
+| `src/lib/social/airtable.ts` | Idempotent upsert into Social Posts (keyed on External ID); Content publish queue |
+| `src/lib/social/index.ts` | `syncSocialMetrics()`, `publishScheduledContent()`, `automationStatus()`, endpoint auth |
+| `src/app/api/social/sync` | Phase 1 trigger (Cron GET / manual POST) |
+| `src/app/api/social/publish` | Phase 2 trigger (Cron GET / manual POST) |
+| `src/app/api/social/status` | Config + last-run status for the dashboard |
 
-One scheduled scenario (daily is plenty), with a branch per channel:
+### Principles
 
-| Step | Module | Notes |
-| --- | --- | --- |
-| Trigger | Schedule | Once daily (Free-plan safe) |
-| LinkedIn | *Get posts* + *Get post statistics* | Own profile / admin'd Company Page |
-| Instagram | *Get media* + *Get media insights* | IG Business account |
-| Facebook | *Get Page posts* + *Get post insights* | Page you administer |
-| Write | Airtable *Upsert a record* into **Social Posts**, matched on **External ID** | Prevents duplicates; refreshes metrics on existing rows |
+- **Env-gated & graceful.** A channel activates only when its credentials are
+  present; a missing channel is skipped, never erroring. With nothing
+  configured the page shows a setup notice — no placeholder data.
+- **Idempotent.** Posts upsert by **External ID**, so re-running only refreshes
+  metrics; it never duplicates rows.
+- **Failure-isolated.** One channel's (or one post's) failure is caught, logged,
+  and reported — it never aborts the rest of the run.
+- **Resilient.** Every outbound call is wrapped in exponential-backoff retries
+  for transient (429 / 5xx) responses.
+- **Safe by default.** Publishing (Phase 2) is off unless `SOCIAL_PUBLISH_ENABLED=true`.
+
+## Phase 1 — metrics sync (read-only)
+
+`GET/POST /api/social/sync` → `syncSocialMetrics()`:
+
+1. For each configured channel, fetch recent posts + engagement.
+2. Normalize to Social Posts fields (mapping below).
+3. Upsert into Airtable in batches, matched on External ID.
+4. Return a per-channel run report (fetched / created / updated / errors).
+
+Scheduled daily by Vercel Cron (`vercel.json`), and runnable on demand from the
+**Sync now** button on the Published Posts page.
 
 ### Field mapping (platform → Social Posts)
 
 | Social Posts field | LinkedIn | Instagram | Facebook |
 | --- | --- | --- | --- |
-| Caption | commentary/text | caption | message |
+| Caption | commentary | caption | message |
 | Channel | `LinkedIn` | `Instagram` | `Facebook` |
-| Post Type | article/image/… | IMAGE/VIDEO/REEL/CAROUSEL | status/photo/video |
-| Published | created time | timestamp | created_time |
-| Permalink | post URL | permalink | permalink_url |
-| Media URL | thumbnail | media_url / thumbnail_url | full_picture |
-| Likes | likeCount | like_count | reactions |
-| Comments | commentCount | comments_count | comments |
-| Shares | shareCount | — | shares |
-| Reach | impressionCount* | reach (insight) | post_impressions_unique |
-| Impressions | impressionCount | impressions (insight) | post_impressions |
+| Post Type | image/text | IMAGE/VIDEO/REEL/CAROUSEL/STORY | photo/video/link/status |
+| Published | createdAt | timestamp | created_time |
+| Permalink | feed update URL | permalink | permalink_url |
+| Media URL | — | media_url / thumbnail_url | full_picture |
+| Likes | socialActions likes | like_count | reactions.total_count |
+| Comments | socialActions comments | comments_count | comments.total_count |
+| Shares | — | — | shares.count |
+| Reach | impressions | reach (insight) | post_impressions_unique |
+| Impressions | impressions | impressions (insight) | post_impressions |
 | External ID | post URN | media id | post id |
 | Last Synced | now() | now() | now() |
 
-\* LinkedIn exposes impressions on organization posts; personal-post metrics
-are more limited.
+## Phase 2 — publish scheduled content (opt-in)
 
-## Phase 2 (later): publish/schedule from Airtable
+`GET/POST /api/social/publish` → `publishScheduledContent()`:
 
-When a **Content** row is marked *Approved / Scheduled*, a second scenario
-publishes it to the chosen channel on its post date and writes the resulting
-post back into **Social Posts** (closing the loop with Phase 1). This needs
-publish permissions and careful testing, and will likely require a Make paid
-tier — tackled after Phase 1 is verified with live data.
+1. Requires `SOCIAL_PUBLISH_ENABLED=true` and a `SOCIAL_DEFAULT_PUBLISH_CHANNEL`.
+2. Reads **Content** rows whose Status is *"Scheduled to be published"* and
+   whose Post Date is now due.
+3. Publishes each to the default channel, writes the resulting post into
+   **Social Posts** (closing the loop with Phase 1), and only then advances the
+   Content Status to *"Published"* — so a failed publish safely retries next run.
+
+> The Content table has no per-row channel/media fields, so publishing uses the
+> post idea text as the caption and a single default channel. Adding a
+> "Channel" (and "Media URL") field to Content would enable per-row,
+> multi-channel targeting — the provider layer already accepts both.
+
+## Configuration
+
+All credentials are optional and documented in `.env.example`:
+
+- `CRON_SECRET` — protects the trigger endpoints (Cron sends it as a Bearer
+  token; the in-app button is allowed same-origin). Always set in production.
+- LinkedIn: `LINKEDIN_ACCESS_TOKEN`, `LINKEDIN_AUTHOR_URN`
+- Instagram: `INSTAGRAM_ACCESS_TOKEN`, `INSTAGRAM_BUSINESS_ACCOUNT_ID`
+- Facebook: `FACEBOOK_PAGE_ACCESS_TOKEN`, `FACEBOOK_PAGE_ID`
+- Publishing: `SOCIAL_PUBLISH_ENABLED`, `SOCIAL_DEFAULT_PUBLISH_CHANNEL`
+
+Account requirements: Facebook needs a **Page** you administer; Instagram a
+**Business/Creator** account linked to that Page; LinkedIn your profile and/or a
+**Company Page** you administer. Token scopes must include read access to posts
+and insights (and publish scopes for Phase 2).
+
+### Scheduling & scalability
+
+- Cron cadence lives in `vercel.json`. The daily schedule is Hobby-plan safe;
+  on a paid plan you can raise the publish frequency for tighter scheduling.
+- Snapshots are small (tens–hundreds of rows); upserts batch at Airtable's
+  10-records-per-request limit and paginate reads. If volume grows, the
+  per-channel providers can be moved behind a queue without touching the engine
+  or the dashboard.
+
+## Alternative: Make.com (no-code)
+
+If you would rather not store platform tokens on the server, a Make.com scenario
+can perform the same Phase 1 upsert:
+
+| Step | Module | Notes |
+| --- | --- | --- |
+| Trigger | Schedule | Once daily |
+| LinkedIn | *Get posts* + *Get post statistics* | Own profile / admin'd Company Page |
+| Instagram | *Get media* + *Get media insights* | IG Business account |
+| Facebook | *Get Page posts* + *Get post insights* | Page you administer |
+| Write | Airtable *Upsert a record* into **Social Posts**, matched on **External ID** | Prevents duplicates; refreshes metrics |
+
+Because both paths write the same table keyed on External ID, you can use either
+(or migrate between them) without changing the dashboard.
