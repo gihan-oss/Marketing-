@@ -3,9 +3,8 @@
 import { PageState } from "@/components/PageState";
 import { KpiCard } from "@/components/KpiCard";
 import { ChartCard, CategoryBars, Donut, TrendArea, SERIES } from "@/components/charts";
-import { DataTable } from "@/components/DataTable";
 import { SocialAutomationNotice } from "@/components/SocialAutomationNotice";
-import { PostGallery } from "@/components/PostGallery";
+import { PostsView } from "@/components/PostsView";
 import { TABLES } from "@/lib/schema";
 import { groupByOption, monthlySeries } from "@/lib/metrics";
 import { fmtNumber } from "@/lib/format";
@@ -63,7 +62,6 @@ export default function SocialPage() {
                 <KpiCard key={mm.id} metric={mm} />
               ))}
             </div>
-            <PostGallery posts={posts} title="Posts" />
             <div className="grid grid-2">
               <ChartCard
                 title="Posts by channel"
@@ -81,23 +79,7 @@ export default function SocialPage() {
                 </ChartCard>
               )}
             </div>
-            <DataTable
-              table="social"
-              records={posts}
-              columns={[
-                "caption",
-                "channel",
-                "postType",
-                "published",
-                "likes",
-                "comments",
-                "shares",
-                "reach",
-                "impressions",
-                "permalink",
-              ]}
-              title="All published posts"
-            />
+            <PostsView posts={posts} />
           </>
         );
       }}
