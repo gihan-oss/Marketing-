@@ -218,6 +218,29 @@ export function invalidate(clientKey?: ClientKey) {
 }
 
 /**
+ * Create a single record. Validated by the caller against the editable-field
+ * allowlist; this function only performs the HTTP write.
+ */
+export async function createRecord(
+  baseId: string,
+  tableId: string,
+  fields: Record<string, string | number | null>
+): Promise<string> {
+  const apiKey = process.env.AIRTABLE_API_KEY;
+  if (!apiKey) throw new Error("AIRTABLE_API_KEY is not configured");
+  const res = await fetch(`${API_ROOT}/${baseId}/${tableId}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ records: [{ fields }], typecast: true }),
+  });
+  if (!res.ok) {
+    throw new Error(`Airtable create ${res.status}: ${await res.text()}`);
+  }
+  const body = (await res.json()) as { records: { id: string }[] };
+  return body.records[0]?.id ?? "";
+}
+
+/**
  * Update a single field on one record. Validated by the caller against the
  * editable-field allowlist; this function only performs the HTTP write.
  */

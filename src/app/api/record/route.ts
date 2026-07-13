@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { invalidate, updateRecordField } from "@/lib/airtable";
+import { createRecord, invalidate, updateRecordField } from "@/lib/airtable";
 import { AMAL_EDITABLE, BASE_ID, TABLES, type TableKey } from "@/lib/schema";
 import { CLIENTS, type ClientKey, type ClientTableRole } from "@/lib/clients";
 
@@ -88,6 +88,58 @@ export async function POST(request: Request) {
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Write failed" },
+      { status: 502 }
+    );
+  }
+}
+
+interface CreateBody {
+  tableKey: TableKey;
+  fields: Record<string, string | number | null>;
+}
+
+/**
+ * Create a record on the marketing base. Authorized against the same
+ * editable-field allowlist as updates — only allowlisted fields on known
+ * tables can be set, so the dashboard can create (e.g.) new Content ideas
+ * but nothing outside that surface.
+ */
+export async function PUT(request: Request) {
+  if (!process.env.AIRTABLE_API_KEY) {
+    return NextResponse.json({ error: "AIRTABLE_API_KEY is not configured" }, { status: 503 });
+  }
+  let body: CreateBody;
+  try {
+    body = (await request.json()) as CreateBody;
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const table = TABLES[body.tableKey];
+  if (!table) return NextResponse.json({ error: "Unknown table" }, { status: 400 });
+  const allow = AMAL_EDITABLE[body.tableKey] ?? [];
+  if (allow.length === 0) {
+    return NextResponse.json({ error: "Table does not allow creation" }, { status: 403 });
+  }
+
+  const out: Record<string, string | number | null> = {};
+  for (const [fieldKey, value] of Object.entries(body.fields ?? {})) {
+    if (!allow.includes(fieldKey)) continue; // silently drop non-editable fields
+    const def = table.fields[fieldKey];
+    if (!def || value === "" || value == null) continue;
+    out[def.name] =
+      def.type === "number" || def.type === "currency" ? Number(value) : String(value);
+  }
+  if (Object.keys(out).length === 0) {
+    return NextResponse.json({ error: "No valid fields provided" }, { status: 400 });
+  }
+
+  try {
+    const id = await createRecord(BASE_ID, table.id, out);
+    invalidate();
+    return NextResponse.json({ ok: true, id });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Create failed" },
       { status: 502 }
     );
   }
