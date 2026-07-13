@@ -54,9 +54,13 @@ export default function SocialPage() {
           .filter((s) => s.records.length > 0);
         const cadence = monthlySeries(posts, "published");
 
+        const activeChannels = Array.from(
+          new Set(posts.map((p) => String(p.fields.channel)).filter(Boolean))
+        );
+
         return (
           <>
-            <SocialAutomationNotice />
+            <SocialAutomationNotice activeChannels={activeChannels} />
             <div className="grid grid-kpi">
               {metrics.map((mm) => (
                 <KpiCard key={mm.id} metric={mm} />
