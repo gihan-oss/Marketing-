@@ -98,6 +98,33 @@ export interface SendResult {
  * Send (or schedule) one templated email. `scheduledAt` is an ISO-8601 string
  * with timezone offset; omit to send immediately.
  */
+/**
+ * Send a one-off HTML email (no template) — used for internal mails like
+ * sending a content script to the CEO for approval.
+ */
+export async function sendHtmlEmail(opts: {
+  email: string;
+  subject: string;
+  html: string;
+  senderName?: string;
+}): Promise<SendResult> {
+  const { email, subject, html, senderName } = opts;
+  try {
+    const body = (await brevo("/smtp/email", {
+      method: "POST",
+      body: JSON.stringify({
+        sender: { email: "gihan@amalandcompany.com", name: senderName ?? "Amal & Company Marketing" },
+        to: [{ email }],
+        subject,
+        htmlContent: html,
+      }),
+    })) as { messageId?: string };
+    return { email, ok: true, messageId: body?.messageId };
+  } catch (err) {
+    return { email, ok: false, error: err instanceof Error ? err.message : "Send failed" };
+  }
+}
+
 export async function sendTemplateEmail(opts: {
   templateId: number;
   email: string;

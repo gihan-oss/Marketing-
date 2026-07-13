@@ -28,7 +28,7 @@ export const AMAL_EDITABLE: Record<TableKey, string[]> = {
   pipeline: ["stage", "owner", "nextAction", "nextActionDate", "dealValue", "notes"],
   prospects: ["outreachStatus", "emailStatus", "segment", "region", "source", "notes"],
   webinars: ["status", "prepStatus", "promotionStatus", "registrations", "attendees"],
-  content: ["status", "postType"],
+  content: ["status", "postType", "channel", "presenter", "script", "postIdea", "postDate"],
   campaigns: ["status", "category"],
   strategy: ["status", "notes"],
   people: ["role", "email"],
@@ -216,6 +216,14 @@ export const TABLES: Record<TableKey, TableDef> = {
         type: "singleSelect",
         options: ["Carousel", "Reel", "Webinar", "Poll", "Event", "Testimonial", "Reel + Script", "Post"],
       },
+      channel: {
+        id: "fld9bEX33HzbIo8y7",
+        name: "Channel",
+        type: "singleSelect",
+        options: ["LinkedIn", "Instagram", "Facebook", "All Channels"],
+      },
+      presenter: { id: "fldej7eXRaNdQ1cKl", name: "Presenter", type: "singleLineText" },
+      script: { id: "fldPrEnbuP4xzCbgg", name: "Script", type: "multilineText" },
       status: {
         id: "fldOq3GAut4RP7idc",
         name: "Status",
