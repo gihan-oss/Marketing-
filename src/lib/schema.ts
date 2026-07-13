@@ -26,7 +26,7 @@ export interface FieldDef {
  */
 export const AMAL_EDITABLE: Record<TableKey, string[]> = {
   pipeline: ["stage", "owner", "nextAction", "nextActionDate", "dealValue", "notes"],
-  prospects: ["outreachStatus", "emailStatus", "segment", "region", "source", "notes"],
+  prospects: ["fullName", "title", "organization", "email", "outreachStatus", "emailStatus", "segment", "region", "source", "notes"],
   webinars: ["status", "prepStatus", "promotionStatus", "registrations", "attendees"],
   content: ["status", "postType", "channel", "presenter", "script", "postIdea", "postDate"],
   campaigns: ["status", "category"],

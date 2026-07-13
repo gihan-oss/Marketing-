@@ -179,7 +179,7 @@ function RecordView({ record, onClose }: { record: Rec; onClose: () => void }) {
                 ])
               }
             >
-              ✉ Send email
+              Send email
             </button>
           )}
           <a

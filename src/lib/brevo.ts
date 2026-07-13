@@ -99,6 +99,31 @@ export interface SendResult {
  * with timezone offset; omit to send immediately.
  */
 /**
+ * Create (or refresh) a transactional template in Brevo from raw HTML, so a
+ * design built in the Email Studio becomes selectable in the outreach
+ * composer. Returns the new template's id.
+ */
+export async function createBrevoTemplate(opts: {
+  name: string;
+  subject: string;
+  html: string;
+}): Promise<number> {
+  const body = (await brevo("/smtp/templates", {
+    method: "POST",
+    body: JSON.stringify({
+      templateName: opts.name,
+      subject: opts.subject,
+      htmlContent: opts.html,
+      isActive: true,
+      sender: { email: "gihan@amalandcompany.com", name: "Amal & Company" },
+      replyTo: "gihan@amalandcompany.com",
+      tag: "studio",
+    }),
+  })) as { id: number };
+  return body.id;
+}
+
+/**
  * Send a one-off HTML email (no template) — used for internal mails like
  * sending a content script to the CEO for approval.
  */
