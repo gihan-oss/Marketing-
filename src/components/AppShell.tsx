@@ -11,18 +11,18 @@ import { dimensionValues, activeFilterCount } from "@/lib/filters";
 import { fmtDate } from "@/lib/format";
 
 const NAV = [
-  { href: "/", label: "Dashboard", color: "var(--s1)" },
-  { href: "/prospects", label: "Outreach", color: "var(--s3)" },
-  { href: "/webinars", label: "Webinars", color: "var(--s5)" },
-  { href: "/social", label: "Published Posts", color: "var(--s6)" },
-  { href: "/calendar", label: "Content Calendar", color: "var(--s8)" },
-  { href: "/production", label: "Content Production", color: "var(--s2)" },
+  { href: "/", label: "Dashboard" },
+  { href: "/prospects", label: "Outreach" },
+  { href: "/webinars", label: "Webinars" },
+  { href: "/social", label: "Published Posts" },
+  { href: "/calendar", label: "Content Calendar" },
+  { href: "/production", label: "Content Production" },
 ];
 
 // Active client engagements — the marketing view for each client.
 const CLIENT_NAV = [
-  { href: "/clients/mas-gla", label: "MAS GLA", color: "var(--s4)" },
-  { href: "/clients/kasper", label: "Kasper", color: "var(--s6)" },
+  { href: "/clients/mas-gla", label: "MAS GLA" },
+  { href: "/clients/kasper", label: "Kasper" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -49,7 +49,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="nav-link"
             aria-current={pathname === item.href ? "page" : undefined}
           >
-            <span className="dot" style={{ background: item.color }} />
             {item.label}
           </Link>
         ))}
@@ -71,7 +70,6 @@ export function AppShell({ children }: { children: ReactNode }) {
             color: onClient ? "var(--text)" : undefined,
           }}
         >
-          <span className="dot" style={{ background: "var(--s4)" }} />
           Active Clients
           <span style={{ marginLeft: "auto", opacity: 0.7 }}>{clientsOpen ? "▾" : "▸"}</span>
         </button>
@@ -84,7 +82,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               aria-current={pathname === item.href ? "page" : undefined}
               style={{ paddingLeft: 26 }}
             >
-              <span className="dot" style={{ background: item.color }} />
               {item.label}
             </Link>
           ))}
