@@ -16,6 +16,7 @@ const NAV = [
   { href: "/webinars", label: "Webinars", color: "var(--s5)" },
   { href: "/social", label: "Published Posts", color: "var(--s6)" },
   { href: "/calendar", label: "Content Calendar", color: "var(--s8)" },
+  { href: "/production", label: "Content Production", color: "var(--s2)" },
 ];
 
 // Active client engagements — the marketing view for each client.
