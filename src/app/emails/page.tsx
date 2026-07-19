@@ -34,10 +34,16 @@ export default function EmailStudioPage() {
     setBusy("upload");
     setMsg(null);
     try {
+      // Hosts cap request bodies (~4.5 MB); phone photos easily exceed that.
+      // Downscale in the browser first — email heroes only need ~1600px.
+      const prepared = await downscaleImage(file);
+      if (prepared.blob.size > 4 * 1024 * 1024) {
+        throw new Error("Image is still over 4 MB after compression — use a smaller photo.");
+      }
       const form = new FormData();
-      form.append("file", file);
+      form.append("file", new File([prepared.blob], prepared.name, { type: prepared.type }));
       const res = await fetch("/api/email/upload", { method: "POST", body: form });
-      const b = await res.json();
+      const b = await safeJson(res);
       if (!res.ok) throw new Error(b?.error ?? `Upload failed (${res.status})`);
       setDesign((d) => ({ ...d, imageUrl: b.url }));
       setMsg({ kind: "ok", text: "Photo uploaded — it now has a permanent public link." });
@@ -57,7 +63,7 @@ export default function EmailStudioPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(design),
       });
-      const b = await res.json();
+      const b = await safeJson(res);
       if (!res.ok) throw new Error(b?.error ?? `Save failed (${res.status})`);
       setDesign(b.design);
       setMsg({ kind: "ok", text: "Saved to your design library." });
@@ -78,7 +84,7 @@ export default function EmailStudioPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ design, action, email: testEmail || undefined }),
       });
-      const b = await res.json();
+      const b = await safeJson(res);
       if (!res.ok) throw new Error(b?.error ?? `Failed (${res.status})`);
       setMsg({
         kind: "ok",
@@ -217,6 +223,54 @@ export default function EmailStudioPage() {
       </div>
     </>
   );
+}
+
+/** Parse a JSON response, surfacing plain-text errors (e.g. "Request Entity
+ *  Too Large" from the host) as readable messages instead of JSON crashes. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text.slice(0, 140) || `HTTP ${res.status}` };
+  }
+}
+
+/** Downscale an image in the browser to ≤1600px wide JPEG, so uploads stay
+ *  well under the host's body-size limit. GIFs pass through untouched. */
+async function downscaleImage(
+  file: File
+): Promise<{ blob: Blob; name: string; type: string }> {
+  const passthrough = { blob: file as Blob, name: file.name, type: file.type };
+  if (file.type === "image/gif" || file.size < 600 * 1024) return passthrough;
+
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error("Couldn’t read the image."));
+      i.src = url;
+    });
+    const MAX_W = 1600;
+    const scale = Math.min(1, MAX_W / img.naturalWidth);
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return passthrough;
+    ctx.drawImage(img, 0, 0, w, h);
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.85)
+    );
+    if (!blob) return passthrough;
+    return { blob, name: file.name.replace(/\.[^.]+$/, "") + ".jpg", type: "image/jpeg" };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function Field({ label, children, style }: { label: string; children: React.ReactNode; style?: React.CSSProperties }) {
